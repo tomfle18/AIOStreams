@@ -158,14 +158,14 @@ async function processTorrentsForDebridService(
 
     const parsedTorrent = parsedFiles.get(torrent.title ?? '');
     if (metadata && parsedTorrent) {
-      if (isTitleWrong(parsedTorrent, metadata)) {
-        continue;
-      }
-      if (isSeasonWrong(parsedTorrent, metadata)) {
-        continue;
-      }
-      if (isEpisodeWrong(parsedTorrent, metadata)) {
-        continue;
+      // if (isTitleWrong(parsedTorrent, metadata)) {
+      //   continue;
+      // }
+      // if (isSeasonWrong(parsedTorrent, metadata)) {
+      //   continue;
+      // }
+      // if (isEpisodeWrong(parsedTorrent, metadata)) {
+      //   continue;
       }
     }
     file = magnetCheckResult
