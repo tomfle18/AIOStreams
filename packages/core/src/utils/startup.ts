@@ -580,11 +580,6 @@ const logStartupInfo = () => {
         '       '
       );
       logKeyValue(
-        '    Indexers:',
-        Env.BUILTIN_PROWLARR_INDEXERS ? '✅ Configured' : '❌ None',
-        '       '
-      );
-      logKeyValue(
         '    Search Timeout:',
         formatMilliseconds(Env.BUILTIN_PROWLARR_SEARCH_TIMEOUT),
         '       '

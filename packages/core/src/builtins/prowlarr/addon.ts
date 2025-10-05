@@ -52,6 +52,19 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     });
   }
 
+  static async getIndexers(
+    url: string,
+    apiKey: string
+  ): Promise<ProwlarrApiIndexer[]> {
+    const api = new ProwlarrApi({
+      baseUrl: url,
+      apiKey: apiKey,
+      timeout: Env.BUILTIN_PROWLARR_SEARCH_TIMEOUT,
+    });
+    const { data } = await api.indexers();
+    return data;
+  }
+
   protected async _searchTorrents(
     parsedId: ParsedId,
     metadata: SearchMetadata
@@ -81,6 +94,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     const chosenIndexers = availableIndexers.filter(
       (indexer) =>
         indexer.enable &&
+        indexer.protocol === 'torrent' &&
         ((!this.indexers.length && !chosenTags.length) ||
           (chosenTags.length &&
             indexer.tags.some((tag) => chosenTags.includes(tag))) ||

@@ -53,6 +53,7 @@ const ProwlarrApiIndexerSchema = z.object({
   sortName: z.string(),
   definitionName: z.string(),
   enable: z.boolean(),
+  protocol: z.string(),
   tags: z.array(z.number()),
 });
 
