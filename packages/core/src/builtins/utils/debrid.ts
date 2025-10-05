@@ -166,7 +166,7 @@ async function processTorrentsForDebridService(
       // }
       // if (isEpisodeWrong(parsedTorrent, metadata)) {
       //   continue;
-      }
+      // }
     }
     file = magnetCheckResult
       ? await selectFileInTorrentOrNZB(
