@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BuiltinDebridServices } from '../../debrid/utils.js';
+import { CacheAndPlaySchema } from '../../db/schemas.js';
 
 const TorBoxApiErrorResponseSchema = z.object({
   success: z.literal(false),
@@ -91,4 +92,5 @@ export const TorBoxSearchAddonUserDataSchema = z.object({
     1,
     'At least one service must be configured'
   ),
+  cacheAndPlay: CacheAndPlaySchema.optional(),
 });

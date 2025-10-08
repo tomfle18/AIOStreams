@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ParsedId } from '../../utils/id-parser.js';
-import { constants, createLogger } from '../../utils/index.js';
+import { constants, createLogger, Env } from '../../utils/index.js';
 import { Torrent, NZB } from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
 import { createHash } from 'crypto';
@@ -10,6 +10,7 @@ import {
   NabAddonConfigSchema,
   NabAddonConfig,
 } from '../base/nab/addon.js';
+import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 
 const logger = createLogger('newznab');
 
@@ -19,15 +20,20 @@ class NewznabApi extends BaseNabApi<'newznab'> {
   }
 }
 
+export const NewznabAddonConfigSchema = NabAddonConfigSchema.extend({
+  proxyAuth: z.string().optional(),
+});
+export type NewznabAddonConfig = z.infer<typeof NewznabAddonConfigSchema>;
+
 // Addon class
-export class NewznabAddon extends BaseNabAddon<NabAddonConfig, NewznabApi> {
+export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
   readonly name = 'Newznab';
   readonly version = '1.0.0';
   readonly id = 'newznab';
   readonly logger = logger;
   readonly api: NewznabApi;
-  constructor(userData: NabAddonConfig, clientIp?: string) {
-    super(userData, NabAddonConfigSchema, clientIp);
+  constructor(userData: NewznabAddonConfig, clientIp?: string) {
+    super(userData, NewznabAddonConfigSchema, clientIp);
     if (
       !userData.services.find((s) => s.id === constants.TORBOX_SERVICE) ||
       userData.services.length > 1
@@ -74,6 +80,32 @@ export class NewznabAddon extends BaseNabAddon<NabAddonConfig, NewznabApi> {
           (result.newznab?.size ? Number(result.newznab.size) : 0),
         type: 'usenet',
       });
+    }
+
+    if (this.userData.proxyAuth) {
+      try {
+        BuiltinProxy.validateAuth(this.userData.proxyAuth);
+      } catch (error) {
+        throw new Error('Invalid AIOStreams Proxy Auth Credentials');
+      }
+      const proxy = createProxy({
+        id: constants.BUILTIN_SERVICE,
+        url: Env.BASE_URL,
+        credentials: this.userData.proxyAuth,
+      });
+      const urlsToProxy = nzbs.map((nzb) => nzb.nzb);
+      const proxiedUrls = await proxy.generateUrls(
+        urlsToProxy.map((url) => ({
+          url,
+          filename: url.split('/').pop(),
+        }))
+      );
+      if (!proxiedUrls) {
+        throw new Error('Failed to proxy NZBs');
+      }
+      for (let i = 0; i < nzbs.length; i++) {
+        nzbs[i].nzb = proxiedUrls[i];
+      }
     }
     return nzbs;
   }

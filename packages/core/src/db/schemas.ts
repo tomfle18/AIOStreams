@@ -284,6 +284,15 @@ const CatalogModification = z.object({
   addonName: z.string().min(1).optional(), // the name of the addon that provides the catalog
 });
 
+export const CacheAndPlaySchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    streamTypes: z.array(z.enum(['usenet', 'torrent'])).optional(),
+  })
+  .optional();
+
+export type CacheAndPlay = z.infer<typeof CacheAndPlaySchema>;
+
 export const UserDataSchema = z.object({
   uuid: z.string().uuid().optional(),
   encryptedPassword: z.string().min(1).optional(),
@@ -442,6 +451,7 @@ export const UserDataSchema = z.object({
       mode: z.enum(['exact', 'contains']).optional(),
       matchYear: z.boolean().optional(),
       yearTolerance: z.number().min(0).max(100).optional(),
+      similarityThreshold: z.number().min(0).max(1).optional(),
       enabled: z.boolean().optional(),
       requestTypes: z.array(z.string()).optional(),
       addons: z.array(z.string()).optional(),
@@ -468,6 +478,7 @@ export const UserDataSchema = z.object({
   presets: PresetList,
   catalogModifications: z.array(CatalogModification).optional(),
   externalDownloads: z.boolean().optional(),
+  cacheAndPlay: CacheAndPlaySchema.optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;

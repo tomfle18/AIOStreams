@@ -77,6 +77,7 @@ export class BuiltinAddonPreset extends Preset {
         id: service,
         credential: this.getServiceCredential(service, userData),
       })),
+      cacheAndPlay: userData.cacheAndPlay,
     };
   }
 }

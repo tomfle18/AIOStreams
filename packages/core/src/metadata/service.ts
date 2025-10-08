@@ -153,7 +153,7 @@ export class MetadataService {
               logger.debug(`TMDB metadata: ${JSON.stringify(tmdbMetadata)}`);
               if (tmdbMetadata.title) titles.unshift(tmdbMetadata.title);
               if (tmdbMetadata.titles) titles.push(...tmdbMetadata.titles);
-              if (!year && tmdbMetadata.year) year = tmdbMetadata.year;
+              if (tmdbMetadata.year) year = tmdbMetadata.year;
               if (tmdbMetadata.yearEnd) yearEnd = tmdbMetadata.yearEnd;
               if (tmdbMetadata.seasons)
                 seasons = tmdbMetadata.seasons.sort(
@@ -171,7 +171,7 @@ export class MetadataService {
               const tvdbMetadata = tvdbResult.value;
               if (tvdbMetadata.title) titles.unshift(tvdbMetadata.title);
               if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
-              if (!year && tvdbMetadata.year) year = tvdbMetadata.year;
+              if (tvdbMetadata.year) year = tvdbMetadata.year;
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
               tvdbId = tvdbMetadata.tvdbId;
             } else if (tvdbResult.status === 'rejected') {

@@ -8,3 +8,4 @@ export { default as gdriveApi } from './gdrive.js';
 export { default as debridApi } from './debrid.js';
 export { default as searchApi } from './search.js';
 export { default as animeApi } from './anime.js';
+export { default as proxyApi } from './proxy.js';

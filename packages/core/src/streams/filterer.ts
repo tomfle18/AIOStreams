@@ -316,6 +316,7 @@ class StreamFilterer {
     const performTitleMatch = (stream: ParsedStream) => {
       const titleMatchingOptions = {
         mode: 'exact',
+        similarityThreshold: 0.85,
         ...(this.userData.titleMatching ?? {}),
       };
       if (!titleMatchingOptions || !titleMatchingOptions.enabled) {
@@ -364,7 +365,7 @@ class StreamFilterer {
           normaliseTitle(streamTitle),
           requestedMetadata.titles.map(normaliseTitle),
           {
-            threshold: 0.85,
+            threshold: titleMatchingOptions.similarityThreshold,
           }
         );
       } else {
@@ -372,7 +373,7 @@ class StreamFilterer {
           normaliseTitle(streamTitle),
           requestedMetadata.titles.map(normaliseTitle),
           {
-            threshold: 0.85,
+            threshold: titleMatchingOptions.similarityThreshold,
             scorer: partial_ratio,
           }
         );

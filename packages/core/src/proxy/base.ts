@@ -1,5 +1,11 @@
 import { StreamProxyConfig } from '../db/schemas.js';
-import { Cache, createLogger, maskSensitiveInfo, Env } from '../utils/index.js';
+import {
+  Cache,
+  createLogger,
+  maskSensitiveInfo,
+  Env,
+  constants,
+} from '../utils/index.js';
 
 const logger = createLogger('proxy');
 const cache = Cache.getInstance<string, string>('publicIp');
@@ -14,7 +20,7 @@ export interface ProxyStream {
 }
 
 type ValidatedStreamProxyConfig = StreamProxyConfig & {
-  id: 'mediaflow' | 'stremthru';
+  id: 'mediaflow' | 'stremthru' | 'builtin';
   url: string;
   credentials: string;
 };
@@ -25,6 +31,9 @@ export abstract class BaseProxy {
     /^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/;
 
   constructor(config: StreamProxyConfig) {
+    if (config.id === constants.BUILTIN_SERVICE) {
+      config.url = Env.BASE_URL;
+    }
     if (!config.id || !config.credentials || !config.url) {
       throw new Error('Proxy configuration is missing');
     }

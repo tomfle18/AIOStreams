@@ -21,6 +21,7 @@ export enum ErrorCode {
   METHOD_NOT_ALLOWED = 'METHOD_NOT_ALLOWED',
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
   BAD_REQUEST = 'BAD_REQUEST',
+  UNAUTHORIZED = 'UNAUTHORIZED',
 }
 
 interface ErrorDetails {
@@ -88,6 +89,10 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
   [ErrorCode.BAD_REQUEST]: {
     statusCode: 400,
     message: 'Bad request',
+  },
+  [ErrorCode.UNAUTHORIZED]: {
+    statusCode: 401,
+    message: 'Unauthorized',
   },
 };
 
@@ -231,8 +236,13 @@ export type BuiltinServiceId = (typeof BUILTIN_SUPPORTED_SERVICES)[number];
 
 export const MEDIAFLOW_SERVICE = 'mediaflow' as const;
 export const STREMTHRU_SERVICE = 'stremthru' as const;
+export const BUILTIN_SERVICE = 'builtin' as const;
 
-export const PROXY_SERVICES = [MEDIAFLOW_SERVICE, STREMTHRU_SERVICE] as const;
+export const PROXY_SERVICES = [
+  MEDIAFLOW_SERVICE,
+  STREMTHRU_SERVICE,
+  BUILTIN_SERVICE,
+] as const;
 export type ProxyServiceId = (typeof PROXY_SERVICES)[number];
 
 export const PROXY_SERVICE_DETAILS: Record<
@@ -258,7 +268,14 @@ export const PROXY_SERVICE_DETAILS: Record<
     description:
       '[StremThru](https://github.com/MunifTanjim/stremthru) is a feature packed companion to Stremio which also offers a HTTP proxy, written in Go.',
     credentialDescription:
-      'A valid credential for your StremThru instance, defined in the `STREMTHRU_PROXY_AUTH` environment variable.',
+      'A valid username:password pair for your StremThru instance, defined in the `STREMTHRU_PROXY_AUTH` environment variable.',
+  },
+  [BUILTIN_SERVICE]: {
+    id: BUILTIN_SERVICE,
+    name: 'Builtin Proxy',
+    description: 'A proxy service that is built into the core of AIOStreams',
+    credentialDescription:
+      'A valid username:password pair for this AIOStreams instance, defined in the `BUILTIN_PROXY_AUTH` environment variable.',
   },
 };
 

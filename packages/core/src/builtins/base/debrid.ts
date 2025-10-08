@@ -1,4 +1,9 @@
-import { Manifest, Meta, Stream } from '../../db/schemas.js';
+import {
+  CacheAndPlaySchema,
+  Manifest,
+  Meta,
+  Stream,
+} from '../../db/schemas.js';
 import { z, ZodError } from 'zod';
 import { IdParser, IdType, ParsedId } from '../../utils/id-parser.js';
 import {
@@ -50,6 +55,7 @@ export const BaseDebridConfigSchema = z.object({
   tmdbApiKey: z.string().optional(),
   tmdbReadAccessToken: z.string().optional(),
   tvdbApiKey: z.string().optional(),
+  cacheAndPlay: CacheAndPlaySchema.optional(),
 });
 export type BaseDebridConfig = z.infer<typeof BaseDebridConfigSchema>;
 
@@ -460,12 +466,18 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             hash: torrentOrNzb.hash,
             sources: torrentOrNzb.sources,
             index: torrentOrNzb.file.index,
+            cacheAndPlay:
+              this.userData.cacheAndPlay?.enabled &&
+              this.userData.cacheAndPlay?.streamTypes?.includes('torrent'),
           }
         : {
             type: 'usenet',
             nzb: torrentOrNzb.nzb,
             hash: torrentOrNzb.hash,
             index: torrentOrNzb.file.index,
+            cacheAndPlay:
+              this.userData.cacheAndPlay?.enabled &&
+              this.userData.cacheAndPlay?.streamTypes?.includes('usenet'),
           }
       : undefined;
 

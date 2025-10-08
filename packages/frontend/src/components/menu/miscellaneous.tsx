@@ -173,6 +173,63 @@ function Content() {
         )}
         {mode === 'pro' && (
           <SettingsCard
+            title="Cache and Play"
+            description={
+              <div className="space-y-2">
+                <p>
+                  This feature allows you to have uncached streams simply wait
+                  for it to finish downloading and then play it rather than
+                  showing a short video telling you to try again later. Only
+                  recommended for Usenet downloads as they finish a lot quicker
+                  in most cases.
+                </p>
+                <Alert intent="info-basic">
+                  <p className="text-sm">
+                    This feature will only work for built-in addons.
+                  </p>
+                </Alert>
+              </div>
+            }
+          >
+            <Switch
+              label="Enable"
+              side="right"
+              value={userData.cacheAndPlay?.enabled}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  cacheAndPlay: {
+                    ...prev.cacheAndPlay,
+                    enabled: value,
+                  },
+                }));
+              }}
+            />
+            <Combobox
+              label="Stream Types"
+              options={['usenet', 'torrent'].map((streamType) => ({
+                label: streamType,
+                value: streamType,
+                textValue: streamType,
+              }))}
+              multiple
+              emptyMessage="No stream types found"
+              defaultValue={['usenet']}
+              value={userData.cacheAndPlay?.streamTypes ?? ['usenet']}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  cacheAndPlay: {
+                    ...prev.cacheAndPlay,
+                    streamTypes: value as ('usenet' | 'torrent')[],
+                  },
+                }));
+              }}
+            />
+          </SettingsCard>
+        )}
+        {mode === 'pro' && (
+          <SettingsCard
             title="External Downloads"
             description="Adds a stream that automatically opens the stream in your browser below every stream for easier downloading"
           >

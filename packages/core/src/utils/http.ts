@@ -138,7 +138,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
 }
 
 const proxyAgents = new Map<string, Dispatcher>();
-function getProxyAgent(proxyUrl: string): Dispatcher | undefined {
+export function getProxyAgent(proxyUrl: string): Dispatcher | undefined {
   if (!proxyUrl) {
     return undefined;
   }
@@ -163,7 +163,7 @@ function getProxyAgent(proxyUrl: string): Dispatcher | undefined {
   return proxyAgent;
 }
 
-function shouldProxy(url: URL): {
+export function shouldProxy(url: URL): {
   useProxy: boolean;
   proxyIndex: number;
 } {

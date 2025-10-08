@@ -1,5 +1,5 @@
 import { number, z } from 'zod';
-import { Stream } from '../../db/index.js';
+import { CacheAndPlay, Stream } from '../../db/index.js';
 import {
   AnimeDatabase,
   BuiltinServiceId,
@@ -55,7 +55,8 @@ abstract class SourceHandler {
 
   constructor(
     protected searchApi: TorboxSearchApi,
-    protected readonly searchUserEngines: boolean
+    protected readonly searchUserEngines: boolean,
+    protected readonly cacheAndPlay: CacheAndPlay
   ) {
     this.useCache =
       !this.searchUserEngines ||
@@ -95,12 +96,18 @@ abstract class SourceHandler {
             hash: torrentOrNzb.hash,
             sources: torrentOrNzb.sources,
             index: torrentOrNzb.file.index,
+            cacheAndPlay:
+              this.cacheAndPlay?.enabled &&
+              this.cacheAndPlay?.streamTypes?.includes('torrent'),
           }
         : {
             type: 'usenet',
             nzb: torrentOrNzb.nzb,
             hash: torrentOrNzb.hash,
             index: torrentOrNzb.file.index,
+            cacheAndPlay:
+              this.cacheAndPlay?.enabled &&
+              this.cacheAndPlay?.streamTypes?.includes('usenet'),
           }
       : undefined;
 
@@ -262,9 +269,10 @@ export class TorrentSourceHandler extends SourceHandler {
     searchApi: TorboxSearchApi,
     services: z.infer<typeof TorBoxSearchAddonUserDataSchema>['services'],
     searchUserEngines: boolean,
+    cacheAndPlay: CacheAndPlay,
     clientIp?: string
   ) {
-    super(searchApi, searchUserEngines);
+    super(searchApi, searchUserEngines, cacheAndPlay);
     this.services = services;
     this.clientIp = clientIp;
   }
@@ -445,9 +453,10 @@ export class UsenetSourceHandler extends SourceHandler {
     torboxApi: TorboxApi,
     searchUserEngines: boolean,
     services: z.infer<typeof TorBoxSearchAddonUserDataSchema>['services'],
+    cacheAndPlay: CacheAndPlay,
     clientIp?: string
   ) {
-    super(searchApi, searchUserEngines);
+    super(searchApi, searchUserEngines, cacheAndPlay);
     this.torboxApi = torboxApi;
     this.services = services.filter((service) => service.id === 'torbox');
     this.clientIp = clientIp;

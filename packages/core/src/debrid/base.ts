@@ -119,6 +119,7 @@ const BasePlaybackInfoSchema = z.object({
 
 const BaseFileInfoSchema = z.object({
   index: z.number().optional(),
+  cacheAndPlay: z.boolean().optional(),
 });
 
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
@@ -162,16 +163,19 @@ export interface DebridService {
   // Common methods
   resolve(
     playbackInfo: PlaybackInfo,
-    filename: string
+    filename: string,
+    cacheAndPlay: boolean
   ): Promise<string | undefined>;
 
   // Torrent specific methods
   checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]>;
+  listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
 
   // Usenet specific methods
   checkNzbs?(nzbs: string[]): Promise<DebridDownload[]>;
+  listNzbs?(id?: string): Promise<DebridDownload[]>;
   addNzb?(nzb: string, name: string): Promise<DebridDownload>;
   generateUsenetLink?(
     downloadId: string,

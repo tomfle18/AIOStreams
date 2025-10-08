@@ -10,6 +10,7 @@ import {
   debridApi,
   searchApi,
   animeApi,
+  proxyApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -94,6 +95,7 @@ if (Env.ENABLE_SEARCH_API) {
   apiRouter.use('/search', searchApi);
 }
 apiRouter.use('/anime', animeApi);
+apiRouter.use('/proxy', proxyApi);
 app.use(`/api/v${constants.API_VERSION}`, apiRouter);
 
 // Stremio Routes

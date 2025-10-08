@@ -200,6 +200,24 @@ const readonly = makeValidator((x) => {
   return x;
 });
 
+const proxyAuth = makeValidator((x) => {
+  if (typeof x !== 'string') {
+    throw new EnvError('Proxy auth must be a string');
+  }
+  // comma separated list of username:password
+  const userMap: Map<string, string> = new Map();
+  x.split(',').forEach((x) => {
+    const [username, password] = x.split(':');
+    if (!username || !password) {
+      throw new EnvError(
+        'Proxy auth must be a comma separated list of username:password pairs'
+      );
+    }
+    userMap.set(username, password);
+  });
+  return userMap;
+});
+
 const boolOrList = makeValidator((x) => {
   if (typeof x !== 'string') {
     return undefined;
@@ -1587,6 +1605,15 @@ export const Env = cleanEnv(process.env, {
   DEFAULT_ASTREAM_USER_AGENT: userAgent({
     default: undefined,
     desc: 'Default AStream user agent',
+  }),
+
+  BUILTIN_PROXY_AUTH: proxyAuth({
+    default: undefined,
+    desc: 'Builtin proxy auth',
+  }),
+  BUILTIN_PROXY_ADMINS: commaSeparated({
+    default: undefined,
+    desc: 'Comma separated list of admin usernames. If not set, all users are admins.',
   }),
 
   BUILTIN_STREMTHRU_URL: url({

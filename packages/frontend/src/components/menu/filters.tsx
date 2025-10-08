@@ -1233,6 +1233,56 @@ function Content() {
                     }}
                   />
 
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Slider
+                        label="Similarity Threshold"
+                        help="The minimum similarity threshold required for a title to be considered a match. Lower values allow more leniency whereas higher values are more strict."
+                        moreHelp="The similarity is calculated using the Levenshtein distance algorithm."
+                        disabled={!userData.titleMatching?.enabled}
+                        value={[
+                          userData.titleMatching?.similarityThreshold ?? 0.85,
+                        ]}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        defaultValue={[0.85]}
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            titleMatching: {
+                              ...prev.titleMatching,
+                              similarityThreshold: value[0],
+                            },
+                          }));
+                        }}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <NumberInput
+                        label="Value"
+                        step={0.01}
+                        value={
+                          userData.titleMatching?.similarityThreshold ?? 0.85
+                        }
+                        min={0}
+                        max={1}
+                        disabled={!userData.titleMatching?.enabled}
+                        onValueChange={(newValue) => {
+                          if (newValue !== undefined) {
+                            setUserData((prev) => ({
+                              ...prev,
+                              titleMatching: {
+                                ...prev.titleMatching,
+                                similarityThreshold: newValue,
+                              },
+                            }));
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Combobox

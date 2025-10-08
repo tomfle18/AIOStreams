@@ -151,7 +151,11 @@ export const getTimeTakenSincePoint = (point: number) => {
   const duration = timeNow - point;
   if (duration < 1000) {
     return `${duration.toFixed(2)}ms`;
-  } else {
+  } else if (duration < 60000) {
     return `${(duration / 1000).toFixed(2)}s`;
+  } else if (duration < 3600000) {
+    return `${(duration / 60000).toFixed(0)}m`;
+  } else {
+    return `${(duration / 3600000).toFixed(0)}h`;
   }
 };

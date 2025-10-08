@@ -34,8 +34,11 @@ export class SootioPreset extends Preset {
   static override get METADATA() {
     const supportedServices: ServiceId[] = [
       constants.REALDEBRID_SERVICE,
-      constants.OFFCLOUD_SERVICE,
       constants.TORBOX_SERVICE,
+      constants.PREMIUMIZE_SERVICE,
+      constants.ALLDEBRID_SERVICE,
+      constants.OFFCLOUD_SERVICE,
+      constants.DEBRIDER_SERVICE,
     ];
 
     const supportedResources = [
@@ -79,6 +82,16 @@ export class SootioPreset extends Preset {
           { label: 'Anime', value: 'anime' },
         ],
         default: [],
+      },
+      {
+        id: 'useMultipleInstances',
+        name: 'Use Multiple Instances',
+        description:
+          'Sootio supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
+        type: 'boolean',
+        required: false,
+        showInNoobMode: false,
+        default: false,
       },
       {
         id: 'socials',
@@ -127,27 +140,40 @@ export class SootioPreset extends Preset {
       );
     }
 
-    let addons = usableServices.map((service) => {
-      return this.generateAddon(userData, options, service.id);
-    });
+    if (options.useMultipleInstances) {
+      return usableServices.map((service) => {
+        return this.generateAddon(userData, options, [service.id]);
+      });
+    }
 
-    return addons;
+    return [
+      this.generateAddon(
+        userData,
+        options,
+        usableServices.map((service) => service.id)
+      ),
+    ];
   }
 
   private static generateAddon(
     userData: UserData,
     options: Record<string, any>,
-    serviceId?: ServiceId
+    serviceIds?: ServiceId[]
   ): Addon {
     return {
       name: options.name || this.METADATA.NAME,
-      identifier: serviceId
-        ? `${constants.SERVICE_DETAILS[serviceId].shortName}`
+      identifier:
+        serviceIds && serviceIds.length > 1
+          ? 'multi'
+          : serviceIds
+            ? constants.SERVICE_DETAILS[serviceIds[0]].shortName
+            : undefined,
+      displayIdentifier: serviceIds
+        ? serviceIds
+            .map((id) => constants.SERVICE_DETAILS[id].shortName)
+            .join(' | ')
         : undefined,
-      displayIdentifier: serviceId
-        ? `${constants.SERVICE_DETAILS[serviceId].shortName}`
-        : undefined,
-      manifestUrl: this.generateManifestUrl(userData, options, serviceId),
+      manifestUrl: this.generateManifestUrl(userData, options, serviceIds),
       enabled: true,
       mediaTypes: options.mediaTypes || [],
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -166,27 +192,36 @@ export class SootioPreset extends Preset {
   private static generateManifestUrl(
     userData: UserData,
     options: Record<string, any>,
-    serviceId?: ServiceId
+    serviceIds?: ServiceId[]
   ) {
     const url = (options.url || this.METADATA.URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }
-    if (!serviceId) {
+    if (!serviceIds?.length) {
       throw new Error(
         `${this.METADATA.NAME} requires at least one usable service, but none were found. Please enable at least one of the following services: ${this.METADATA.SUPPORTED_SERVICES.join(
           ', '
         )}`
       );
     }
+
     const serviceNameMap: Partial<Record<ServiceId, string>> = {
       realdebrid: 'RealDebrid',
       offcloud: 'OffCloud',
       torbox: 'TorBox',
+      alldebrid: 'AllDebrid',
+      debrider: 'DebriderApp',
+      premiumize: 'Premiumize',
     };
     const config = {
-      DebridProvider: serviceNameMap[serviceId],
-      DebridApiKey: this.getServiceCredential(serviceId, userData),
+      DebridProvider: serviceNameMap[serviceIds[0]],
+      DebridApiKey: this.getServiceCredential(serviceIds[0], userData),
+      DebridServices: serviceIds.map((id) => ({
+        provider: serviceNameMap[id],
+        apiKey: this.getServiceCredential(id, userData),
+      })),
+      Languages: [],
     };
     return `${url}/${this.urlEncodeJSON(config)}/manifest.json`;
   }

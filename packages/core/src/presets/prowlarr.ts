@@ -10,40 +10,6 @@ import {
 import { StremThruPreset } from './stremthru.js';
 import { BuiltinAddonPreset } from './builtin.js';
 import { ProwlarrAddon } from '../builtins/index.js';
-import { ProwlarrApiIndexer } from '../builtins/prowlarr/api.js';
-
-let indexers: ProwlarrApiIndexer[] | undefined;
-const logger = createLogger('prowlarr');
-
-if (Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY) {
-  (async () => {
-    while (typeof DB !== 'undefined' && !DB.getInstance().isInitialised()) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    try {
-      indexers = await ProwlarrAddon.getIndexers(
-        Env.BUILTIN_PROWLARR_URL!,
-        Env.BUILTIN_PROWLARR_API_KEY!
-      );
-      indexers = indexers.filter(
-        (indexer) =>
-          indexer.enable &&
-          indexer.protocol === 'torrent' &&
-          (Env.BUILTIN_PROWLARR_INDEXERS?.length
-            ? [indexer.name, indexer.sortName, indexer.definitionName]
-                .map((x) => x.toLowerCase())
-                .some((x) =>
-                  Env.BUILTIN_PROWLARR_INDEXERS!.map((x) =>
-                    x.toLowerCase()
-                  ).includes(x)
-                )
-            : true)
-      );
-    } catch (e) {
-      logger.error(`Failed to get indexers from Prowlarr: ${e}`);
-    }
-  })();
-}
 
 export class ProwlarrPreset extends BuiltinAddonPreset {
   static override get METADATA() {
@@ -95,7 +61,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
         type: 'password',
         required: !Env.BUILTIN_PROWLARR_URL || !Env.BUILTIN_PROWLARR_API_KEY,
       },
-      ...(indexers
+      ...(ProwlarrAddon.preconfiguredIndexers
         ? [
             {
               id: 'indexers',
@@ -103,11 +69,13 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
               description:
                 'If using the preconfigured instance, select the indexers to use here.',
               type: 'multi-select',
-              options: indexers.map((indexer) => ({
+              options: ProwlarrAddon.preconfiguredIndexers.map((indexer) => ({
                 label: indexer.name,
                 value: indexer.name,
               })),
-              default: indexers.map((indexer) => indexer.name),
+              default: ProwlarrAddon.preconfiguredIndexers.map(
+                (indexer) => indexer.name
+              ),
             } as const,
           ]
         : [
@@ -272,10 +240,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
     } else {
       prowlarrUrl = Env.BUILTIN_PROWLARR_URL;
       prowlarrApiKey = Env.BUILTIN_PROWLARR_API_KEY;
-      // only use indexer options when using the preconfigured instance.
-      indexers = Array.isArray(options.indexers)
-        ? options.indexers
-        : `${options.indexers}`.split(',');
+      indexers = Array.isArray(options.indexers) ? options.indexers : undefined;
     }
 
     if (!prowlarrUrl || !prowlarrApiKey) {

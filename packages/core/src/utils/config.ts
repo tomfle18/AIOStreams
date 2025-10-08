@@ -902,6 +902,9 @@ async function validateProxy(
     if (!proxy.id) {
       throw new Error('Proxy ID is required');
     }
+    if (proxy.id === constants.BUILTIN_SERVICE) {
+      proxy.url = Env.BASE_URL;
+    }
     if (!proxy.url) {
       throw new Error('Proxy URL is required');
     }

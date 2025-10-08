@@ -11,6 +11,7 @@ import {
   FeatureControl,
   PTT,
   AnimeDatabase,
+  ProwlarrAddon,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -57,6 +58,14 @@ async function initialiseAnimeDatabase() {
   }
 }
 
+async function initialiseProwlarr() {
+  try {
+    await ProwlarrAddon.fetchpreconfiguredIndexers();
+  } catch (error) {
+    logger.error('Failed to initialise Prowlarr:', error);
+  }
+}
+
 async function start() {
   try {
     logStartupInfo();
@@ -65,6 +74,7 @@ async function start() {
     await initialisePTT();
     initialiseAnimeDatabase();
     FeatureControl.initialise();
+    await initialiseProwlarr();
     if (Env.PRUNE_MAX_DAYS >= 0) {
       startAutoPrune();
     }

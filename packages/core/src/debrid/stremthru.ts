@@ -5,6 +5,7 @@ import {
   createLogger,
   getSimpleTextHash,
   Cache,
+  DistributedLock,
 } from '../utils/index.js';
 import { selectFileInTorrentOrNZB, Torrent } from './utils.js';
 import {
@@ -60,6 +61,11 @@ export class StremThruInterface implements DebridService {
       clientIp: config.clientIp,
       timeout: 10000,
     });
+  }
+
+  public async listMagnets(): Promise<DebridDownload[]> {
+    const result = await this.stremthru.store.listMagnets({});
+    return result.data.items;
   }
 
   public async checkMagnets(
@@ -197,7 +203,24 @@ export class StremThruInterface implements DebridService {
 
   public async resolve(
     playbackInfo: PlaybackInfo,
-    filename: string
+    filename: string,
+    cacheAndPlay: boolean
+  ): Promise<string | undefined> {
+    const { result } = await DistributedLock.getInstance().withLock(
+      `stremthru:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${this.config.clientIp}:${this.config.serviceName}:${this.config.token}`,
+      () => this._resolve(playbackInfo, filename, cacheAndPlay),
+      {
+        timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
+        ttl: 10000,
+      }
+    );
+    return result;
+  }
+
+  private async _resolve(
+    playbackInfo: PlaybackInfo,
+    filename: string,
+    cacheAndPlay: boolean
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'usenet') {
       throw new DebridError('StremThru does not support usenet operations', {
@@ -220,12 +243,18 @@ export class StremThruInterface implements DebridService {
 
     if (cachedLink !== undefined) {
       logger.debug(`Using cached link for ${hash}`);
-      return cachedLink ?? undefined;
+      if (cachedLink === null) {
+        if (!cacheAndPlay) {
+          return undefined;
+        }
+      } else {
+        return cachedLink;
+      }
     }
 
     logger.debug(`Adding magnet to ${this.serviceName} for ${magnet}`);
 
-    const magnetDownload = await this.addMagnet(magnet);
+    let magnetDownload = await this.addMagnet(magnet);
 
     logger.debug(`Magnet download added for ${magnet}`, {
       status: magnetDownload.status,
@@ -235,7 +264,32 @@ export class StremThruInterface implements DebridService {
     if (magnetDownload.status !== 'downloaded') {
       // temporarily cache the null value for 1m
       StremThruInterface.playbackLinkCache.set(cacheKey, null, 60);
-      return undefined;
+      if (!cacheAndPlay) {
+        return undefined;
+      }
+      // poll status when cacheAndPlay is true, max wait time is 110s
+      for (let i = 0; i < 10; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 11000));
+        const list = await this.listMagnets();
+        const magnetDownloadInList = list.find(
+          (magnet) => magnet.hash === hash
+        );
+        if (!magnetDownloadInList) {
+          logger.warn(`Failed to find ${hash} in list`);
+        } else {
+          logger.debug(`Polled status for ${hash}`, {
+            attempt: i + 1,
+            status: magnetDownloadInList.status,
+          });
+          if (magnetDownloadInList.status === 'downloaded') {
+            magnetDownload = magnetDownloadInList;
+            break;
+          }
+        }
+      }
+      if (magnetDownload.status !== 'downloaded') {
+        return undefined;
+      }
     }
 
     if (!magnetDownload.files?.length) {

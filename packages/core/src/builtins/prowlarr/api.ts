@@ -53,7 +53,7 @@ const ProwlarrApiIndexerSchema = z.object({
   sortName: z.string(),
   definitionName: z.string(),
   enable: z.boolean(),
-  protocol: z.string(),
+  protocol: z.enum(['torrent', 'usenet']),
   tags: z.array(z.number()),
 });
 
@@ -169,7 +169,7 @@ class ProwlarrApi {
           },
           ProwlarrApiSearchSchema
         ),
-      `${this.baseUrl}:search:${query}`,
+      `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${limit}:${offset}`,
       Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL
     );
   }

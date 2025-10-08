@@ -39,6 +39,14 @@ export class NewznabPreset extends BuiltinAddonPreset {
         default: '/api',
       },
       {
+        id: 'proxyAuth',
+        name: 'AIOStreams Proxy Auth',
+        description:
+          'If you want to proxy the NZBs through AIOStreams, provide a username:password pair from the `BUILTIN_PROXY_AUTH` environment variable.',
+        type: 'password',
+        required: false,
+      },
+      {
         id: 'timeout',
         name: 'Timeout',
         description: 'The timeout for this addon',
@@ -150,6 +158,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       url: options.newznabUrl,
       apiPath: options.apiPath,
       apiKey: options.apiKey,
+      proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? false,
     };
 

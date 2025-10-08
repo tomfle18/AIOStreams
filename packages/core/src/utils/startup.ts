@@ -528,6 +528,34 @@ const logStartupInfo = () => {
     );
   });
 
+  logSection('BUILT-IN PROXY', '🔧', () => {
+    if (Env.BUILTIN_PROXY_AUTH) {
+      logKeyValue('Status:', '✅ Configured');
+      const users = Array.from(Env.BUILTIN_PROXY_AUTH.keys());
+      if (users.length === 0) {
+        logKeyValue('Users:', '❌ None');
+      } else {
+        logKeyValue('Users:', '');
+        for (const user of users) {
+          const password = Env.BUILTIN_PROXY_AUTH.get(user);
+          const masked =
+            password && password.length > 0
+              ? '*'.repeat(Math.max(4, Math.min(password.length, 12)))
+              : '❌ None';
+          logKeyValue(`  → ${user}:`, masked, '       ');
+        }
+      }
+      logKeyValue(
+        'Admins:',
+        Env.BUILTIN_PROXY_ADMINS
+          ? `${Env.BUILTIN_PROXY_ADMINS.join(', ')}`
+          : '⚠️  All users'
+      );
+    } else {
+      logKeyValue('Status:', '❌ None');
+    }
+  });
+
   logSection('BUILT-IN ADDONS', '🔧', () => {
     // Torznab
     logKeyValue('*znab:', '');

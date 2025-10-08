@@ -105,7 +105,11 @@ router.get(
 
       let streamUrl: string | undefined;
       try {
-        streamUrl = await debridInterface.resolve(playbackInfo, filename);
+        streamUrl = await debridInterface.resolve(
+          playbackInfo,
+          filename,
+          fileInfo.cacheAndPlay ?? false
+        );
       } catch (error: any) {
         let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;
         if (error instanceof DebridError) {

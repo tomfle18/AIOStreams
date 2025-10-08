@@ -91,6 +91,7 @@ export class TorBoxSearchAddon {
           this.searchApi,
           this.userData.services,
           this.userData.searchUserEngines,
+          this.userData.cacheAndPlay,
           this.clientIp
         )
       );
@@ -102,6 +103,7 @@ export class TorBoxSearchAddon {
           this.torboxApi,
           this.userData.searchUserEngines,
           this.userData.services,
+          this.userData.cacheAndPlay,
           this.clientIp
         )
       );

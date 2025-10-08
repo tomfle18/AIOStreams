@@ -279,6 +279,7 @@ export class DistributedLock {
           logger.warn(`Polled error result for key: ${key} from SQL lock.`);
           throw new Error(storedResult.error);
         }
+        logger.debug(`Polled cached result for key: ${key} from SQL lock.`);
         return { result: storedResult.value!, cached: true };
       }
       await new Promise((res) => setTimeout(res, retryInterval));
