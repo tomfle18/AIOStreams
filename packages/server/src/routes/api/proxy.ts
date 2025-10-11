@@ -56,6 +56,7 @@ const ProxyAuthSchema = z.object({
 
 const ProxyDataSchema = z.object({
   url: z.url(),
+  filename: z.string().optional(),
   // These are optional, as we'll be forwarding client headers
   requestHeaders: z.record(z.string(), z.string()).optional(),
   responseHeaders: z.record(z.string(), z.string()).optional(),
@@ -169,11 +170,14 @@ router.all(
 
       if (!rawData || !rawAuth) {
         logger.error(`[${requestId}] Decryption failed`);
-        throw new APIError(
-          constants.ErrorCode.ENCRYPTION_ERROR,
-          undefined,
-          'Could not decrypt data or auth'
+        next(
+          new APIError(
+            constants.ErrorCode.ENCRYPTION_ERROR,
+            undefined,
+            'Could not decrypt data or auth'
+          )
         );
+        return;
       }
 
       data = ProxyDataSchema.parse(JSON.parse(rawData));
@@ -186,30 +190,44 @@ router.all(
         logger.warn(`[${requestId}] Authentication failed`, {
           username: auth.username,
         });
-        throw new APIError(
-          constants.ErrorCode.UNAUTHORIZED,
-          undefined,
-          'Invalid auth'
+        next(
+          new APIError(
+            constants.ErrorCode.UNAUTHORIZED,
+            undefined,
+            'Invalid auth'
+          )
         );
+        return;
       }
 
       // Track the connection
       clientIp =
         req.requestIp || req.ip || req.socket.remoteAddress || 'unknown';
       const timestamp = Date.now();
-      proxyStats
-        .addConnection(auth.username, clientIp, data.url, timestamp, filename)
-        .catch((error) =>
-          logger.warn(`[${requestId}] Failed to add connection to stats`, {
-            error: error instanceof Error ? error.message : String(error),
-          })
-        );
 
       // prepare and execute upstream request
       const { host, ...clientHeaders } = req.headers;
 
       const isBodyRequest =
         req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH';
+      const isGetRequest = req.method === 'GET';
+
+      if (isGetRequest) {
+        proxyStats
+          .addConnection(
+            auth.username,
+            clientIp,
+            data.url,
+            timestamp,
+            requestId,
+            filename
+          )
+          .catch((error) =>
+            logger.warn(`[${requestId}] Failed to add connection to stats`, {
+              error: error instanceof Error ? error.message : String(error),
+            })
+          );
+      }
 
       const upstreamStartTime = Date.now();
       let currentUrl = data.url;
@@ -279,7 +297,17 @@ router.all(
       }
 
       if (!upstreamResponse) {
-        throw new Error('Upstream response not found');
+        logger.error(`[${requestId}] Upstream response not found`);
+        if (!res.headersSent) {
+          next(
+            new APIError(
+              constants.ErrorCode.INTERNAL_SERVER_ERROR,
+              undefined,
+              'Upstream response not found'
+            )
+          );
+        }
+        return;
       }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
 
@@ -305,23 +333,12 @@ router.all(
       } else {
         await pipeline(upstreamResponse.body, res);
       }
+
       logger.debug(`[${requestId}] Proxy connection closed`, {
         username: auth.username,
       });
     } catch (error) {
       const totalDuration = Date.now() - startTime;
-
-      // Remove the connection tracking on error
-      if (auth && clientIp && data) {
-        proxyStats
-          .removeConnection(auth.username, clientIp, data.url)
-          .catch((statsError) =>
-            logger.warn(
-              `[${requestId}] Failed to remove connection from stats on error`,
-              { error: statsError }
-            )
-          );
-      }
 
       if (upstreamResponse) {
         upstreamResponse.body.destroy();
@@ -333,13 +350,23 @@ router.all(
         logger.error(`[${requestId}] Proxy request failed`, {
           error: error instanceof Error ? error.message : String(error),
           durationMs: totalDuration,
+          contentLength: upstreamResponse?.headers['content-length'],
           upstreamStatusCode: upstreamResponse?.statusCode,
         });
-        next(error);
       } else {
         logger.debug(`[${requestId}] Client disconnected (premature close)`, {
           durationMs: totalDuration,
         });
+      }
+    } finally {
+      if (auth && clientIp && data) {
+        proxyStats
+          .endConnection(auth.username, clientIp, data.url, requestId)
+          .catch((statsError) =>
+            logger.warn(`[${requestId}] Failed to end connection in stats`, {
+              error: statsError,
+            })
+          );
       }
     }
   }

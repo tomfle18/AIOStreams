@@ -12,6 +12,8 @@ import path from 'path';
 
 const logger = createLogger('builtin');
 
+const cache = Cache.getInstance<string, string>('publicIp');
+
 export class BuiltinProxy extends BaseProxy {
   public static validateAuth(auth: string): {
     username: string;
@@ -59,12 +61,39 @@ export class BuiltinProxy extends BaseProxy {
   public override async getPublicIp(): Promise<string | null> {
     BuiltinProxy.validateAuth(this.config.credentials);
 
+    if (this.config.publicIp) {
+      return this.config.publicIp;
+    }
+
+    const cacheKey = `${this.config.id}:${this.config.url}:${this.config.credentials}`;
+    const cachedPublicIp = cache ? await cache.get(cacheKey) : null;
+    if (cachedPublicIp) {
+      logger.debug('Returning cached public IP');
+      return cachedPublicIp;
+    }
+
     const response = await makeRequest('https://checkip.amazonaws.com', {
       method: 'GET',
-      timeout: 5000,
+      timeout: 10000,
     });
 
-    return response.text();
+    if (!response.ok) {
+      throw new Error(
+        `Failed to check public IP using AWS: ${response.status}: ${response.statusText}`
+      );
+    }
+
+    const publicIp = await response.text();
+
+    if (publicIp && cache) {
+      await cache.set(cacheKey, publicIp, Env.PROXY_IP_CACHE_TTL);
+    } else {
+      logger.error(
+        `Proxy did not respond with a public IP. Response: ${JSON.stringify(publicIp)}`
+      );
+      throw new Error('Proxy did not respond with a public IP');
+    }
+    return publicIp;
   }
 
   protected override async generateStreamUrls(
@@ -95,9 +124,10 @@ interface ConnectionRecord {
   ip: string;
   url: string;
   filename?: string;
-  timestamp: number;
-  lastSeen: number;
-  count: number;
+  timestamp: number; // Initial connection time
+  lastSeen: number; // Last activity time
+  count: number; // Total number of requests (including seeks)
+  requestIds: string[]; // List of active request IDs
 }
 
 interface UserStats {
@@ -117,7 +147,7 @@ export class BuiltinProxyStats {
     'sql'
   );
 
-  private readonly ACTIVE_THRESHOLD = 60 * 60 * 1000; // 1 hour in milliseconds
+  private static ACTIVE_THRESHOLD = 6 * 60 * 60 * 1000; // 6 hours
 
   constructor() {}
 
@@ -166,34 +196,35 @@ export class BuiltinProxyStats {
 
   public async getActiveConnections(user: string): Promise<ConnectionRecord[]> {
     const encryptedData = await this.activeConnections.get(user);
-    const connections = encryptedData
-      ? this.decryptConnectionRecords(encryptedData)
-      : [];
+    if (!encryptedData) {
+      return [];
+    }
+
+    const connections = this.decryptConnectionRecords(encryptedData);
     const now = Date.now();
 
-    // Filter out connections older than 1 hour and move them to history
-    const activeConnections: ConnectionRecord[] = [];
-    const expiredConnections: ConnectionRecord[] = [];
+    const stillActive: ConnectionRecord[] = [];
+    const stale: ConnectionRecord[] = [];
 
     for (const conn of connections) {
-      if (now - conn.lastSeen <= this.ACTIVE_THRESHOLD) {
-        activeConnections.push(conn);
+      if (now - conn.lastSeen > BuiltinProxyStats.ACTIVE_THRESHOLD) {
+        stale.push(conn);
       } else {
-        expiredConnections.push(conn);
+        stillActive.push(conn);
       }
     }
 
-    // Move expired connections to history
-    if (expiredConnections.length > 0) {
-      await this.moveToHistory(user, expiredConnections);
+    if (stale.length > 0) {
+      await this.moveToHistory(user, stale);
       await this.activeConnections.set(
         user,
-        this.encryptConnectionRecords(activeConnections),
-        24 * 60 * 60
+        this.encryptConnectionRecords(stillActive),
+        24 * 60 * 60,
+        true
       );
     }
 
-    return activeConnections;
+    return stillActive;
   }
 
   public async getConnectionHistory(user: string): Promise<ConnectionRecord[]> {
@@ -206,92 +237,129 @@ export class BuiltinProxyStats {
     ip: string,
     url: string,
     timestamp: number,
+    requestId: string,
     filename?: string
   ) {
-    logger.debug(`[${user}] Adding connection`, {
-      ip,
-      url,
-      filename,
-      timestamp,
-    });
-
     const connectionKey = `${ip}:${url}`;
     const now = Date.now();
 
-    // Get current active connections
     const activeConnections = await this.getActiveConnections(user);
-
-    // Check if this connection already exists in active connections
     const existingIndex = activeConnections.findIndex(
       (conn) => `${conn.ip}:${conn.url}` === connectionKey
     );
 
     if (existingIndex >= 0) {
+      // Merge with existing active connection
       const existing = activeConnections[existingIndex];
-      activeConnections[existingIndex] = {
-        ...existing,
-        lastSeen: now,
-        count: existing.count + 1,
-      };
+      existing.lastSeen = now;
+      existing.count += 1;
+      existing.requestIds = existing.requestIds ?? [];
+      if (!existing.requestIds.includes(requestId)) {
+        existing.requestIds.push(requestId);
+      }
     } else {
-      // Add new connection
-      activeConnections.push({
-        ip,
-        url,
-        filename,
-        timestamp,
-        lastSeen: now,
-        count: 1,
-      });
+      // Check history for a potential merge
+      const historyConnections = await this.getConnectionHistory(user);
+      const historyIndex = historyConnections.findIndex(
+        (conn) =>
+          `${conn.ip}:${conn.url}` === connectionKey &&
+          now - conn.lastSeen <= BuiltinProxyStats.ACTIVE_THRESHOLD
+      );
+
+      if (historyIndex >= 0) {
+        // Reactivate from history
+        const record = historyConnections.splice(historyIndex, 1)[0];
+        record.lastSeen = now;
+        record.count += 1;
+        record.requestIds = [requestId];
+        activeConnections.push(record);
+
+        // Update history cache
+        await this.connectionHistory.set(
+          user,
+          this.encryptConnectionRecords(historyConnections),
+          7 * 24 * 60 * 60,
+          true
+        );
+      } else {
+        // Add a completely new connection
+        activeConnections.push({
+          ip,
+          url,
+          filename,
+          timestamp: timestamp,
+          lastSeen: now,
+          count: 1,
+          requestIds: [requestId],
+        });
+      }
     }
 
-    // Sort by lastSeen (most recent first)
     activeConnections.sort((a, b) => b.lastSeen - a.lastSeen);
-
     await this.activeConnections.set(
       user,
       this.encryptConnectionRecords(activeConnections),
-      24 * 60 * 60
+      24 * 60 * 60,
+      true
     );
   }
 
-  public async removeConnection(user: string, ip: string, url: string) {
+  public async endConnection(
+    user: string,
+    ip: string,
+    url: string,
+    requestId: string
+  ) {
     const activeConnections = await this.getActiveConnections(user);
     const connectionKey = `${ip}:${url}`;
+    const now = Date.now();
 
-    const filteredConnections = activeConnections.filter(
-      (conn) => `${conn.ip}:${conn.url}` !== connectionKey
+    const connectionIndex = activeConnections.findIndex(
+      (conn) => `${conn.ip}:${conn.url}` === connectionKey
     );
 
-    await this.activeConnections.set(
-      user,
-      this.encryptConnectionRecords(filteredConnections),
-      24 * 60 * 60
-    );
+    if (connectionIndex >= 0) {
+      const connection = activeConnections[connectionIndex];
+      connection.requestIds =
+        connection.requestIds?.filter((id) => id !== requestId) ?? [];
+      connection.lastSeen = now;
+
+      if (connection.requestIds.length === 0) {
+        // No active requests, move to history immediately
+        const [recordToMove] = activeConnections.splice(connectionIndex, 1);
+        await this.moveToHistory(user, [recordToMove]);
+      }
+
+      await this.activeConnections.set(
+        user,
+        this.encryptConnectionRecords(activeConnections),
+        24 * 60 * 60,
+        true
+      );
+    }
   }
 
   private async moveToHistory(user: string, connections: ConnectionRecord[]) {
-    const existingHistory = await this.getConnectionHistory(user);
+    if (connections.length === 0) return;
 
-    // Merge with existing history, keeping the most recent record for each connection
+    const existingHistory = await this.getConnectionHistory(user);
     const historyMap = new Map<string, ConnectionRecord>();
 
-    // Add existing history
     for (const conn of existingHistory) {
-      const key = `${conn.ip}:${conn.url}`;
-      historyMap.set(key, conn);
+      historyMap.set(`${conn.ip}:${conn.url}`, conn);
     }
 
-    // Add/update with new connections
     for (const conn of connections) {
       const key = `${conn.ip}:${conn.url}`;
+      conn.requestIds = []; // Ensure requestIds is empty in history
       const existing = historyMap.get(key);
 
       if (!existing || conn.lastSeen > existing.lastSeen) {
         historyMap.set(key, conn);
-      } else if (existing) {
-        // Merge counts if the existing record is more recent
+      } else {
+        // This case should be rare, but if merging, combine counts
         existing.count += conn.count;
+        historyMap.set(key, existing);
       }
     }
 
@@ -302,46 +370,8 @@ export class BuiltinProxyStats {
     await this.connectionHistory.set(
       user,
       this.encryptConnectionRecords(updatedHistory),
-      7 * 24 * 60 * 60
-    ); // Keep history for 7 days
-  }
-
-  // Legacy methods for backward compatibility
-  public async getAllActiveConnections(): Promise<
-    Map<
-      string,
-      { ip: string; url: string; filename?: string; timestamp: number }[]
-    >
-  > {
-    const userStats = await this.getAllUserStats();
-    const result = new Map();
-
-    for (const [user, stats] of userStats) {
-      result.set(
-        user,
-        stats.active.map((conn) => ({
-          ip: conn.ip,
-          url: conn.url,
-          filename: conn.filename,
-          timestamp: conn.timestamp,
-        }))
-      );
-    }
-
-    return result;
-  }
-
-  public async addActiveConnection(
-    user: string,
-    ip: string,
-    url: string,
-    timestamp: number,
-    filename?: string
-  ) {
-    return this.addConnection(user, ip, url, timestamp, filename);
-  }
-
-  public async removeActiveConnection(user: string, ip: string, url: string) {
-    return this.removeConnection(user, ip, url);
+      7 * 24 * 60 * 60,
+      true
+    );
   }
 }

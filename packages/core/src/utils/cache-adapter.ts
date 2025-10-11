@@ -11,7 +11,7 @@ const REDIS_TIMEOUT = Env.REDIS_TIMEOUT;
 // Interface that both memory and Redis cache will implement
 export interface CacheBackend<K, V> {
   get(key: K, updateTTL?: boolean): Promise<V | undefined>;
-  set(key: K, value: V, ttl: number): Promise<void>;
+  set(key: K, value: V, ttl: number, forceWrite?: boolean): Promise<void>;
   update(key: K, value: V): Promise<void>;
   clear(): Promise<void>;
   getTTL(key: K): Promise<number>;
@@ -46,7 +46,12 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
     return undefined;
   }
 
-  async set(key: K, value: V, ttl: number): Promise<void> {
+  async set(
+    key: K,
+    value: V,
+    ttl: number,
+    forceWrite?: boolean
+  ): Promise<void> {
     if (this.cache.size >= this.maxSize) {
       this.evict();
     }
@@ -192,7 +197,12 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
     );
   }
 
-  async set(key: K, value: V, ttl: number): Promise<void> {
+  async set(
+    key: K,
+    value: V,
+    ttl: number,
+    forceWrite?: boolean
+  ): Promise<void> {
     if (ttl === 0) return;
     const redisKey = this.getKey(key);
     RedisCacheBackend.writeBuffer.set(redisKey, {
@@ -202,6 +212,8 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
     if (RedisCacheBackend.writeBuffer.size >= RedisCacheBackend.batchSize) {
       RedisCacheBackend.flushWriteBuffer();
+    } else if (forceWrite) {
+      await RedisCacheBackend.flushWriteBuffer();
     }
   }
 
@@ -495,7 +507,12 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     }
   }
 
-  async set(key: K, value: V, ttl: number): Promise<void> {
+  async set(
+    key: K,
+    value: V,
+    ttl: number,
+    forceWrite?: boolean
+  ): Promise<void> {
     if (ttl === 0) return;
 
     const sqlKey = this.getKey(key);
@@ -506,6 +523,8 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
 
     if (SQLCacheBackend.writeBuffer.size >= SQLCacheBackend.batchSize) {
       SQLCacheBackend.flushWriteBuffer();
+    } else if (forceWrite) {
+      await SQLCacheBackend.flushWriteBuffer();
     }
   }
 

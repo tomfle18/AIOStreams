@@ -33,13 +33,13 @@ export function ModeSelectModal({ open, onOpenChange }: ModeSelectModalProps) {
           </p>
           <div className="space-y-4 p-4 rounded-lg bg-gray-900/40 border border-gray-800">
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-[--brand]">Noob</h3>
+              <h3 className="text-lg font-semibold text-[--brand]">Simple</h3>
               <p className="text-sm text-gray-400">
                 Perfect for beginners! Essential options only.
               </p>
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-[--brand]">Pro</h3>
+              <h3 className="text-lg font-semibold text-[--brand]">Advanced</h3>
               <p className="text-sm text-gray-400">
                 For advanced users who want full control. Access all
                 configuration options and advanced features for maximum

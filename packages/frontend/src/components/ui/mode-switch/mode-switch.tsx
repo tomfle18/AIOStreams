@@ -43,14 +43,14 @@ export function ModeSwitch({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex rounded-full bg-gray-900/60 border border-gray-800 overflow-hidden',
+        'relative flex rounded-full bg-gray-800/60 border border-gray-800 overflow-hidden',
         sizeClasses[size],
         className
       )}
     >
       {/* Animated highlight */}
       <div
-        className="absolute top-0 bottom-0 bg-[--brand]/20 border border-[--brand]/30 rounded-full transition-transform duration-300 ease-in-out"
+        className="absolute top-0 bottom-0 bg-white border border-[--brand]/30 rounded-full transition-transform duration-300 ease-in-out"
         style={highlightStyle}
       />
 
@@ -59,23 +59,21 @@ export function ModeSwitch({
         onClick={() => onChange('noob')}
         className={cn(
           'relative flex-1 flex items-center justify-center font-medium transition-colors duration-200',
-          value === 'noob'
-            ? 'text-[--brand]'
-            : 'text-gray-400 hover:text-gray-300'
+          value === 'noob' ? 'text-black' : 'text-gray-400 hover:text-gray-300'
         )}
       >
-        Noob Mode
+        <div className="text-md">
+          <b>SIMPLE</b>
+        </div>
       </button>
       <button
         onClick={() => onChange('pro')}
         className={cn(
           'relative flex-1 flex items-center justify-center font-medium transition-colors duration-200',
-          value === 'pro'
-            ? 'text-[--brand]'
-            : 'text-gray-400 hover:text-gray-300'
+          value === 'pro' ? 'text-black' : 'text-gray-400 hover:text-gray-300'
         )}
       >
-        Pro Mode
+        <b>ADVANCED</b>
       </button>
     </div>
   );
