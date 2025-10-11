@@ -72,6 +72,14 @@ export class NewznabPreset extends BuiltinAddonPreset {
             label: 'Movie',
             value: 'movie',
           },
+          {
+            label: 'Series',
+            value: 'series',
+          },
+          {
+            label: 'Anime',
+            value: 'anime',
+          },
         ],
       },
       {
@@ -132,6 +140,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       enabled: true,
       library: options.libraryAddon ?? false,
       resources: options.resources || undefined,
+      mediaTypes: options.mediaTypes || [],
       timeout: options.timeout || this.METADATA.TIMEOUT,
       preset: {
         id: '',

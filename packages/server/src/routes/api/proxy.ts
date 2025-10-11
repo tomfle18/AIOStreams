@@ -20,6 +20,33 @@ const router: Router = Router();
 // Create a singleton instance of BuiltinProxyStats
 const proxyStats = new BuiltinProxyStats();
 
+function sanitiseHeaderValue(value: string): string {
+  return value.replace(/[^\t\x20-\x7e]/g, '');
+}
+
+// A helper to iterate over the headers object
+function sanitiseHeaders(
+  headers: Record<string, string | string[] | number | undefined>
+): Record<string, string | string[]> {
+  const sanitised: Record<string, string | string[]> = {};
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      sanitised[key] = value.map((v) => sanitiseHeaderValue(v));
+    } else if (typeof value === 'number') {
+      sanitised[key] = String(value);
+    } else {
+      sanitised[key] = sanitiseHeaderValue(value);
+    }
+  }
+
+  return sanitised;
+}
+
 export default router;
 
 const ProxyAuthSchema = z.object({
@@ -66,30 +93,48 @@ router.get(
     }
 
     try {
-      const allConnections = await proxyStats.getAllActiveConnections();
+      const allUserStats = await proxyStats.getAllUserStats();
 
       // Convert Map to a more JSON-friendly format
       const stats = {
         timestamp: new Date().toISOString(),
-        totalUsers: allConnections.size,
-        activeConnections: Object.fromEntries(
-          Array.from(allConnections.entries()).map(([user, connections]) => [
+        totalUsers: allUserStats.size,
+        users: Object.fromEntries(
+          Array.from(allUserStats.entries()).map(([user, userStats]) => [
             user,
-            connections.map((conn) => ({
-              ...conn,
-              timestamp: new Date(conn.timestamp).toISOString(),
-              relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-            })),
+            {
+              active: userStats.active.map((conn) => ({
+                ...conn,
+                timestamp: new Date(conn.timestamp).toISOString(),
+                lastSeen: new Date(conn.lastSeen).toISOString(),
+                relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
+                relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
+              })),
+              history: userStats.history.map((conn) => ({
+                ...conn,
+                timestamp: new Date(conn.timestamp).toISOString(),
+                lastSeen: new Date(conn.lastSeen).toISOString(),
+                relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
+                relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
+              })),
+            },
           ])
         ),
         summary: {
-          totalActiveConnections: Array.from(allConnections.values()).reduce(
-            (total, connections) => total + connections.length,
+          totalActiveConnections: Array.from(allUserStats.values()).reduce(
+            (total, userStats) => total + userStats.active.length,
             0
           ),
-          usersWithActiveConnections: Array.from(
-            allConnections.entries()
-          ).filter(([_, connections]) => connections.length > 0).length,
+          totalHistoryConnections: Array.from(allUserStats.values()).reduce(
+            (total, userStats) => total + userStats.history.length,
+            0
+          ),
+          usersWithActiveConnections: Array.from(allUserStats.entries()).filter(
+            ([_, userStats]) => userStats.active.length > 0
+          ).length,
+          usersWithHistory: Array.from(allUserStats.entries()).filter(
+            ([_, userStats]) => userStats.history.length > 0
+          ).length,
         },
       };
 
@@ -148,16 +193,17 @@ router.all(
         );
       }
 
-      // Track the active connection
-      clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+      // Track the connection
+      clientIp =
+        req.requestIp || req.ip || req.socket.remoteAddress || 'unknown';
       const timestamp = Date.now();
-      proxyStats.addActiveConnection(
-        auth.username,
-        clientIp,
-        data.url,
-        timestamp,
-        filename
-      );
+      proxyStats
+        .addConnection(auth.username, clientIp, data.url, timestamp, filename)
+        .catch((error) =>
+          logger.warn(`[${requestId}] Failed to add connection to stats`, {
+            error: error instanceof Error ? error.message : String(error),
+          })
+        );
 
       // prepare and execute upstream request
       const { host, ...clientHeaders } = req.headers;
@@ -166,52 +212,93 @@ router.all(
         req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH';
 
       const upstreamStartTime = Date.now();
-      const urlObj = new URL(data.url);
-      if (Env.BASE_URL && urlObj.origin === Env.BASE_URL) {
-        const internalUrl = new URL(Env.INTERNAL_URL);
-        urlObj.protocol = internalUrl.protocol;
-        urlObj.host = internalUrl.host;
-        urlObj.port = internalUrl.port;
-      }
+      let currentUrl = data.url;
+      const maxRedirects = 10;
+      let redirectCount = 0;
+      let method = req.method as Dispatcher.HttpMethod;
 
-      if (Env.REQUEST_URL_MAPPINGS) {
-        for (const [key, value] of Object.entries(Env.REQUEST_URL_MAPPINGS)) {
-          if (urlObj.origin === key) {
-            const mappedUrl = new URL(value);
-            urlObj.protocol = mappedUrl.protocol;
-            urlObj.host = mappedUrl.host;
-            urlObj.port = mappedUrl.port;
-            break;
+      while (redirectCount < maxRedirects) {
+        const urlObj = new URL(currentUrl);
+        if (Env.BASE_URL && urlObj.origin === Env.BASE_URL) {
+          const internalUrl = new URL(Env.INTERNAL_URL);
+          urlObj.protocol = internalUrl.protocol;
+          urlObj.host = internalUrl.host;
+          urlObj.port = internalUrl.port;
+        }
+
+        if (Env.REQUEST_URL_MAPPINGS) {
+          for (const [key, value] of Object.entries(Env.REQUEST_URL_MAPPINGS)) {
+            if (urlObj.origin === key) {
+              const mappedUrl = new URL(value);
+              urlObj.protocol = mappedUrl.protocol;
+              urlObj.host = mappedUrl.host;
+              urlObj.port = mappedUrl.port;
+              break;
+            }
           }
         }
+        const { useProxy, proxyIndex } = shouldProxy(urlObj);
+        const proxyAgent = useProxy
+          ? getProxyAgent(Env.ADDON_PROXY![proxyIndex])
+          : undefined;
+        const headers = { ...clientHeaders, ...data.requestHeaders };
+        logger.debug(`[${requestId}] Making upstream request`, {
+          username: auth.username,
+          method: method,
+          proxied: useProxy
+            ? `true${proxyIndex > 1 ? ` (${proxyIndex + 1})` : ''}`
+            : 'false',
+          range: headers['range'],
+          url: currentUrl,
+        });
+        upstreamResponse = await request(currentUrl, {
+          method: method,
+          headers: headers,
+          dispatcher: proxyAgent,
+          body: isBodyRequest ? req : undefined,
+          bodyTimeout: 0,
+          headersTimeout: 0,
+        });
+
+        if ([301, 302, 303, 307, 308].includes(upstreamResponse.statusCode)) {
+          redirectCount++;
+          const location = upstreamResponse.headers['location'];
+          if (!location || typeof location !== 'string') {
+            break; // No location header, stop redirecting
+          }
+          currentUrl = new URL(location, currentUrl).href;
+
+          if ([301, 302, 303].includes(upstreamResponse.statusCode)) {
+            method = 'GET';
+          }
+          // For 307, 308, method remains the same
+          continue;
+        }
+
+        break; // Not a redirect, exit loop
       }
-      const { useProxy, proxyIndex } = shouldProxy(urlObj);
-      const proxyAgent = useProxy
-        ? getProxyAgent(Env.ADDON_PROXY![proxyIndex])
-        : undefined;
-      upstreamResponse = await request(data.url, {
-        method: req.method as Dispatcher.HttpMethod,
-        headers: { ...clientHeaders, ...data.requestHeaders },
-        dispatcher: proxyAgent,
-        body: isBodyRequest ? req : undefined,
-        bodyTimeout: 0,
-        headersTimeout: 0,
-      });
+
+      if (!upstreamResponse) {
+        throw new Error('Upstream response not found');
+      }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
 
-      logger.debug(`[${requestId}] Serving upstream response`, {
-        username: auth.username,
-        targetUrl: data.url,
-        statusCode: upstreamResponse.statusCode,
-        upstreamDuration,
-      });
-
       // forward upstream response to client
-      res.set(upstreamResponse.headers);
+      res.set(sanitiseHeaders(upstreamResponse.headers));
       if (data.responseHeaders) {
         res.set(data.responseHeaders);
       }
       res.status(upstreamResponse.statusCode);
+
+      logger.debug(`[${requestId}] Serving upstream response`, {
+        username: auth.username,
+        statusCode: upstreamResponse.statusCode,
+        upstreamDuration,
+        contentType: upstreamResponse.headers['content-type'],
+        contentLength: upstreamResponse.headers['content-length'],
+        range: upstreamResponse.headers['range'],
+        targetUrl: currentUrl,
+      });
 
       if (req.method === 'HEAD') {
         res.end();
@@ -224,10 +311,10 @@ router.all(
     } catch (error) {
       const totalDuration = Date.now() - startTime;
 
-      // Remove the active connection tracking on error
+      // Remove the connection tracking on error
       if (auth && clientIp && data) {
         proxyStats
-          .removeActiveConnection(auth.username, clientIp, data.url)
+          .removeConnection(auth.username, clientIp, data.url)
           .catch((statsError) =>
             logger.warn(
               `[${requestId}] Failed to remove connection from stats on error`,

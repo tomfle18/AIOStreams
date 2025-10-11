@@ -1,27 +1,15 @@
-import { createLogger, maskSensitiveInfo } from './logger.js';
+import {
+  createLogger,
+  maskSensitiveInfo,
+  formatDurationAsText,
+} from './logger.js';
 import { Env } from './env.js';
 
 const logger = createLogger('startup');
 
-const formatDuration = (seconds: number): string => {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  // return `${days}d ${hours}h ${minutes}m ${secs}s`;
-  let result = '';
-  if (days > 0) result += `${days}d `;
-  if (hours > 0) result += `${hours}h `;
-  if (minutes > 0) result += `${minutes}m `;
-  if (secs > 0) result += `${secs}s`;
-  return result;
-};
-
 const formatMilliseconds = (ms: number): string => {
   if (ms < 1000) return `${ms}ms`;
-  return formatDuration(ms / 1000);
+  return formatDurationAsText(ms / 1000);
 };
 
 const parseBlockedItems = (
@@ -159,42 +147,51 @@ const logStartupInfo = () => {
     if (Env.PROXY_IP_CACHE_TTL === -1) {
       logKeyValue('Proxy IP Cache:', '❌ DISABLED');
     } else {
-      logKeyValue('Proxy IP TTL:', formatDuration(Env.PROXY_IP_CACHE_TTL));
+      logKeyValue(
+        'Proxy IP TTL:',
+        formatDurationAsText(Env.PROXY_IP_CACHE_TTL)
+      );
     }
 
     // Manifest Cache
     if (Env.MANIFEST_CACHE_TTL === -1) {
       logKeyValue('Manifest Cache:', '❌ DISABLED');
     } else {
-      logKeyValue('Manifest TTL:', formatDuration(Env.MANIFEST_CACHE_TTL));
+      logKeyValue(
+        'Manifest TTL:',
+        formatDurationAsText(Env.MANIFEST_CACHE_TTL)
+      );
     }
 
     // Stream Cache
     if (Env.STREAM_CACHE_TTL === -1) {
       logKeyValue('Stream Cache:', '❌ DISABLED');
     } else {
-      logKeyValue('Stream TTL:', formatDuration(Env.STREAM_CACHE_TTL));
+      logKeyValue('Stream TTL:', formatDurationAsText(Env.STREAM_CACHE_TTL));
     }
 
     // Subtitle Cache
     if (Env.SUBTITLE_CACHE_TTL === -1) {
       logKeyValue('Subtitle Cache:', '❌ DISABLED');
     } else {
-      logKeyValue('Subtitle TTL:', formatDuration(Env.SUBTITLE_CACHE_TTL));
+      logKeyValue(
+        'Subtitle TTL:',
+        formatDurationAsText(Env.SUBTITLE_CACHE_TTL)
+      );
     }
 
     // Catalog Cache
     if (Env.CATALOG_CACHE_TTL === -1) {
       logKeyValue('Catalog Cache:', '❌ DISABLED');
     } else {
-      logKeyValue('Catalog TTL:', formatDuration(Env.CATALOG_CACHE_TTL));
+      logKeyValue('Catalog TTL:', formatDurationAsText(Env.CATALOG_CACHE_TTL));
     }
 
     // Meta Cache
     if (Env.META_CACHE_TTL === -1) {
       logKeyValue('Meta Cache:', '❌ DISABLED');
     } else {
-      logKeyValue('Meta TTL:', formatDuration(Env.META_CACHE_TTL));
+      logKeyValue('Meta TTL:', formatDurationAsText(Env.META_CACHE_TTL));
     }
 
     // Addon Catalog Cache
@@ -203,7 +200,7 @@ const logStartupInfo = () => {
     } else {
       logKeyValue(
         'Addon Catalog TTL:',
-        formatDuration(Env.ADDON_CATALOG_CACHE_TTL)
+        formatDurationAsText(Env.ADDON_CATALOG_CACHE_TTL)
       );
     }
 
@@ -213,7 +210,7 @@ const logStartupInfo = () => {
     } else {
       logKeyValue(
         'RPDB API TTL:',
-        formatDuration(Env.RPDB_API_KEY_VALIDITY_CACHE_TTL)
+        formatDurationAsText(Env.RPDB_API_KEY_VALIDITY_CACHE_TTL)
       );
     }
   });
@@ -222,47 +219,47 @@ const logStartupInfo = () => {
     logSection('RATE LIMITING', '🛡️', () => {
       logKeyValue(
         'Static Files:',
-        `${Env.STATIC_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STATIC_RATE_LIMIT_WINDOW)}`
+        `${Env.STATIC_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STATIC_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'User API:',
-        `${Env.USER_API_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.USER_API_RATE_LIMIT_WINDOW)}`
+        `${Env.USER_API_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.USER_API_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Stream API:',
-        `${Env.STREAM_API_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STREAM_API_RATE_LIMIT_WINDOW)}`
+        `${Env.STREAM_API_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STREAM_API_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Format API:',
-        `${Env.FORMAT_API_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.FORMAT_API_RATE_LIMIT_WINDOW)}`
+        `${Env.FORMAT_API_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.FORMAT_API_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Catalog API:',
-        `${Env.CATALOG_API_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.CATALOG_API_RATE_LIMIT_WINDOW)}`
+        `${Env.CATALOG_API_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.CATALOG_API_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Anime API:',
-        `${Env.ANIME_API_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.ANIME_API_RATE_LIMIT_WINDOW)}`
+        `${Env.ANIME_API_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.ANIME_API_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Stremio Stream:',
-        `${Env.STREMIO_STREAM_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STREMIO_STREAM_RATE_LIMIT_WINDOW)}`
+        `${Env.STREMIO_STREAM_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STREMIO_STREAM_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Stremio Catalog:',
-        `${Env.STREMIO_CATALOG_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STREMIO_CATALOG_RATE_LIMIT_WINDOW)}`
+        `${Env.STREMIO_CATALOG_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STREMIO_CATALOG_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Stremio Manifest:',
-        `${Env.STREMIO_MANIFEST_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STREMIO_MANIFEST_RATE_LIMIT_WINDOW)}`
+        `${Env.STREMIO_MANIFEST_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STREMIO_MANIFEST_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Stremio Subtitle:',
-        `${Env.STREMIO_SUBTITLE_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STREMIO_SUBTITLE_RATE_LIMIT_WINDOW)}`
+        `${Env.STREMIO_SUBTITLE_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STREMIO_SUBTITLE_RATE_LIMIT_WINDOW)}`
       );
       logKeyValue(
         'Stremio Meta:',
-        `${Env.STREMIO_META_RATE_LIMIT_MAX_REQUESTS}/${formatDuration(Env.STREMIO_META_RATE_LIMIT_WINDOW)}`
+        `${Env.STREMIO_META_RATE_LIMIT_MAX_REQUESTS}/${formatDurationAsText(Env.STREMIO_META_RATE_LIMIT_WINDOW)}`
       );
     });
   } else {
@@ -331,7 +328,10 @@ const logStartupInfo = () => {
       Env.DISABLE_SELF_SCRAPING ? '❌ Disabled' : '✅ Enabled'
     );
     logKeyValue('Threshold Limit:', Env.RECURSION_THRESHOLD_LIMIT.toString());
-    logKeyValue('Time Window:', formatDuration(Env.RECURSION_THRESHOLD_WINDOW));
+    logKeyValue(
+      'Time Window:',
+      formatDurationAsText(Env.RECURSION_THRESHOLD_WINDOW)
+    );
   });
 
   // Blocked Items
@@ -566,12 +566,12 @@ const logStartupInfo = () => {
     );
     logKeyValue(
       'Search Cache TTL:',
-      formatDuration(Env.BUILTIN_NAB_SEARCH_CACHE_TTL),
+      formatDurationAsText(Env.BUILTIN_NAB_SEARCH_CACHE_TTL),
       '       '
     );
     logKeyValue(
       'Capabilities Cache TTL:',
-      formatDuration(Env.BUILTIN_NAB_CAPABILITIES_CACHE_TTL),
+      formatDurationAsText(Env.BUILTIN_NAB_CAPABILITIES_CACHE_TTL),
       '       '
     );
 
@@ -614,12 +614,12 @@ const logStartupInfo = () => {
       );
       logKeyValue(
         '    Search Cache TTL:',
-        formatDuration(Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL),
+        formatDurationAsText(Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL),
         '       '
       );
       logKeyValue(
         '    Indexers Cache TTL:',
-        formatDuration(Env.BUILTIN_PROWLARR_INDEXERS_CACHE_TTL),
+        formatDurationAsText(Env.BUILTIN_PROWLARR_INDEXERS_CACHE_TTL),
         '       '
       );
     }
@@ -651,11 +651,11 @@ const logStartupInfo = () => {
     if (torboxSearchEnabled) {
       logKeyValue(
         '    Metadata Cache TTL:',
-        formatDuration(Env.BUILTIN_TORBOX_SEARCH_METADATA_CACHE_TTL)
+        formatDurationAsText(Env.BUILTIN_TORBOX_SEARCH_METADATA_CACHE_TTL)
       );
       logKeyValue(
         '    Search API Cache TTL:',
-        formatDuration(Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL)
+        formatDurationAsText(Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL)
       );
 
       if (Env.BUILTIN_TORBOX_SEARCH_TIMEOUT) {
@@ -1480,7 +1480,7 @@ const logStartupInfo = () => {
   // Maintenance & Cleanup
   logSection('MAINTENANCE', '🧹', () => {
     if (Env.PRUNE_MAX_DAYS > 0) {
-      logKeyValue('Prune Interval:', formatDuration(Env.PRUNE_INTERVAL));
+      logKeyValue('Prune Interval:', formatDurationAsText(Env.PRUNE_INTERVAL));
       logKeyValue('Prune Max Age:', `${Env.PRUNE_MAX_DAYS} days`);
     } else {
       logKeyValue('Pruning :', '❌ DISABLED');

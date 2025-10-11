@@ -55,7 +55,11 @@ class TorboxStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean {
-    return stream.name?.includes('Your Media') ?? false;
+    return (
+      stream.name?.includes('Your Media') ||
+      stream.description?.includes('Click play to start') ||
+      false
+    );
   }
   protected override getService(
     stream: Stream,
@@ -63,9 +67,10 @@ class TorboxStreamParser extends StreamParser {
   ): ParsedStream['service'] | undefined {
     return {
       id: constants.TORBOX_SERVICE,
-      cached: ['Your Media', 'Instant'].some((str) =>
-        stream.name?.includes(str)
-      ),
+      cached:
+        ['Your Media', 'Instant'].some((str) => stream.name?.includes(str)) ||
+        stream.description?.includes('Click play to start') ||
+        false,
     };
   }
 
@@ -74,7 +79,7 @@ class TorboxStreamParser extends StreamParser {
     currentParsedStream: ParsedStream
   ): string | undefined {
     if (stream.description?.includes('Click play to start')) {
-      currentParsedStream.filename = undefined;
+      // currentParsedStream.filename = undefined;
       return 'Click play to start streaming your media';
     }
     return undefined;
