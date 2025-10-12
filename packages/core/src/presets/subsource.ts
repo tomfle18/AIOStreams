@@ -128,6 +128,14 @@ export class SubSourcePreset extends Preset {
         Env.DEFAULT_SUBSOURCE_TIMEOUT || Env.DEFAULT_TIMEOUT
       ),
       {
+        id: 'subSourceApiKey',
+        type: 'string',
+        name: 'SubSource API Key',
+        description:
+          'Your SubSource API key, located at your [account dashboard](https://subsource.net/dashboard/profile)',
+        required: true,
+      },
+      {
         id: 'language',
         type: 'multi-select',
         name: 'Language',
@@ -138,6 +146,20 @@ export class SubSourcePreset extends Preset {
           min: 1,
           max: 5,
         },
+      },
+      {
+        id: 'subtitleTypes',
+        type: 'multi-select',
+        name: 'Subtitle Type',
+        description: 'Select the subtitle types you want',
+        options: [
+          { label: 'Translated', value: 1 },
+          { label: 'Retail', value: 2 },
+          { label: 'Machine/AI', value: 3 },
+          { label: 'Forced', value: 4 },
+        ],
+        required: true,
+        default: [1, 2, 3, 4],
       },
       {
         id: 'hearingImpairment',
@@ -214,11 +236,19 @@ export class SubSourcePreset extends Preset {
     if (options.url?.endsWith('/manifest.json')) {
       return options.url;
     }
+    if (!options.subSourceApiKey) {
+      throw new Error(
+        `${this.METADATA.NAME} requires a SubSource API Key to be set. Please provide it in the configuration.`
+      );
+    }
+    options.subtitleTypes = options.subtitleTypes || [1, 2, 3, 4];
 
     const host = options.url || this.METADATA.URL;
 
+    const type =
+      options.subtitleTypes.length === 4 ? 0 : options.subtitleTypes.join(',');
     const config = Buffer.from(
-      `${options.language.join(',')}/${options.hearingImpairment}`
+      `${options.subSourceApiKey}/${options.language.join(',')}/${options.hearingImpairment}/type:${type}`
     ).toString('base64');
 
     return `${host}/${config}/manifest.json`;

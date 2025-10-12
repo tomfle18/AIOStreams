@@ -104,11 +104,39 @@ const DefaultUserData: UserData = {
         direction: 'desc',
       },
       {
+        key: 'resolution',
+        direction: 'desc',
+      },
+      {
         key: 'library',
         direction: 'desc',
       },
       {
-        key: 'resolution',
+        key: 'regexPatterns',
+        direction: 'desc',
+      },
+      {
+        key: 'streamType',
+        direction: 'desc',
+      },
+      {
+        key: 'visualTag',
+        direction: 'desc',
+      },
+      {
+        key: 'audioTag',
+        direction: 'desc',
+      },
+      {
+        key: 'audioChannel',
+        direction: 'desc',
+      },
+      {
+        key: 'encode',
+        direction: 'desc',
+      },
+      {
+        key: 'language',
         direction: 'desc',
       },
       {
@@ -180,7 +208,8 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       newData.proxy = {
         ...newData.proxy,
         enabled: forced.proxy.enabled ?? defaults.proxy?.enabled ?? undefined,
-        id: (forced.proxy.id ?? defaults.proxy?.id ?? 'mediaflow') as
+        id: (forced.proxy.id ?? defaults.proxy?.id ?? 'builtin') as
+          | 'builtin'
           | 'mediaflow'
           | 'stremthru'
           | undefined,

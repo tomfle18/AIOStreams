@@ -126,7 +126,7 @@ export class IMDBMetadata {
       return cached;
     }
     const response = await makeRequest(url, {
-      timeout: 2000,
+      timeout: 5000,
     });
     const meta = MetaSchema.parse(((await response.json()) as any).meta);
     this.cinemetaCache.set(url, meta, this.cinemetaCacheTTL);

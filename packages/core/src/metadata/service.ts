@@ -255,7 +255,7 @@ export class MetadataService {
 
             if (
               !uniqueTitles.length ||
-              (year === undefined && id.mediaType !== 'movie')
+              (year === undefined && id.mediaType === 'movie')
             ) {
               throw new Error(`Could not find metadata for ${id.fullId}`);
             }
@@ -280,8 +280,8 @@ export class MetadataService {
             };
           },
           {
-            timeout: 2500,
-            ttl: 5000,
+            timeout: 10000,
+            ttl: 12000,
             retryInterval: 100,
           }
         );

@@ -80,6 +80,7 @@ export class DebridioTvPreset extends Preset {
       { value: 'usa_locals', label: 'United States Local' },
       { value: 'usa', label: 'United States' },
       { value: 'za', label: 'South Africa' },
+      { value: '247', label: '24/7' },
       { value: 'search', label: 'Enable Searching' },
     ];
     const options: Option[] = [

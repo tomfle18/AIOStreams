@@ -184,8 +184,8 @@ router.all(
       auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
 
       if (
-        !Env.BUILTIN_PROXY_AUTH?.has(auth.username) ||
-        Env.BUILTIN_PROXY_AUTH?.get(auth.username) !== auth.password
+        !Env.AIOSTREAMS_AUTH?.has(auth.username) ||
+        Env.AIOSTREAMS_AUTH?.get(auth.username) !== auth.password
       ) {
         logger.warn(`[${requestId}] Authentication failed`, {
           username: auth.username,
@@ -353,6 +353,15 @@ router.all(
           contentLength: upstreamResponse?.headers['content-length'],
           upstreamStatusCode: upstreamResponse?.statusCode,
         });
+        if (!res.headersSent) {
+          next(
+            new APIError(
+              constants.ErrorCode.INTERNAL_SERVER_ERROR,
+              undefined,
+              'Proxy request failed'
+            )
+          );
+        }
       } else {
         logger.debug(`[${requestId}] Client disconnected (premature close)`, {
           durationMs: totalDuration,

@@ -239,9 +239,9 @@ export const STREMTHRU_SERVICE = 'stremthru' as const;
 export const BUILTIN_SERVICE = 'builtin' as const;
 
 export const PROXY_SERVICES = [
-  MEDIAFLOW_SERVICE,
-  STREMTHRU_SERVICE,
   BUILTIN_SERVICE,
+  STREMTHRU_SERVICE,
+  MEDIAFLOW_SERVICE,
 ] as const;
 export type ProxyServiceId = (typeof PROXY_SERVICES)[number];
 
@@ -254,13 +254,12 @@ export const PROXY_SERVICE_DETAILS: Record<
     credentialDescription: string;
   }
 > = {
-  [MEDIAFLOW_SERVICE]: {
-    id: MEDIAFLOW_SERVICE,
-    name: 'MediaFlow Proxy',
-    description:
-      '[MediaFlow Proxy](https://github.com/mhdzumair/mediaflow-proxy) is a high performance proxy server which supports HTTP, HLS, and more.',
+  [BUILTIN_SERVICE]: {
+    id: BUILTIN_SERVICE,
+    name: 'Builtin Proxy',
+    description: 'A proxy service that is built into the core of AIOStreams',
     credentialDescription:
-      'The value of your MediaFlow Proxy instance `API_PASSWORD` environment variable.',
+      'A valid username:password pair for this AIOStreams instance, defined in the `AIOSTREAMS_AUTH` environment variable.',
   },
   [STREMTHRU_SERVICE]: {
     id: STREMTHRU_SERVICE,
@@ -270,12 +269,13 @@ export const PROXY_SERVICE_DETAILS: Record<
     credentialDescription:
       'A valid username:password pair for your StremThru instance, defined in the `STREMTHRU_PROXY_AUTH` environment variable.',
   },
-  [BUILTIN_SERVICE]: {
-    id: BUILTIN_SERVICE,
-    name: 'Builtin Proxy',
-    description: 'A proxy service that is built into the core of AIOStreams',
+  [MEDIAFLOW_SERVICE]: {
+    id: MEDIAFLOW_SERVICE,
+    name: 'MediaFlow Proxy',
+    description:
+      '[MediaFlow Proxy](https://github.com/mhdzumair/mediaflow-proxy) is a high performance proxy server which supports HTTP, HLS, and more.',
     credentialDescription:
-      'A valid username:password pair for this AIOStreams instance, defined in the `BUILTIN_PROXY_AUTH` environment variable.',
+      'The value of your MediaFlow Proxy instance `API_PASSWORD` environment variable.',
   },
 };
 

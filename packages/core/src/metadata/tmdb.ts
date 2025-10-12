@@ -164,7 +164,7 @@ export class TMDBMetadata {
     url.searchParams.set('external_source', `${IdTypeMap[parsedId.type]}`);
     this.addSearchParams(url);
     const response = await makeRequest(url.toString(), {
-      timeout: 2000,
+      timeout: 5000,
       headers: this.getHeaders(),
     });
 
@@ -222,7 +222,7 @@ export class TMDBMetadata {
     );
     this.addSearchParams(detailsUrl);
     const detailsResponse = await makeRequest(detailsUrl.toString(), {
-      timeout: 2000,
+      timeout: 5000,
       headers: this.getHeaders(),
     });
 
@@ -278,7 +278,7 @@ export class TMDBMetadata {
 
     const [altTitlesResult, translationsResult] = await Promise.allSettled([
       makeRequest(altTitlesUrl.toString(), {
-        timeout: 2000,
+        timeout: 5000,
         headers: this.getHeaders(),
       }).then(async (response) => {
         if (!response.ok) {
@@ -300,7 +300,7 @@ export class TMDBMetadata {
             );
       }),
       makeRequest(translatedTitlesUrl.toString(), {
-        timeout: 2000,
+        timeout: 5000,
         headers: this.getHeaders(),
       }).then(async (response) => {
         if (!response.ok) {

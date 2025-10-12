@@ -15,7 +15,7 @@ const VALID_MENUS = [
   'save-install',
 ];
 
-const PRO_ONLY_MENUS = ['proxy', 'sorting'];
+const PRO_ONLY_MENUS = ['sorting'];
 
 export type MenuId = (typeof VALID_MENUS)[number];
 

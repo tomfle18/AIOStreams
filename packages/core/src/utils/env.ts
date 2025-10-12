@@ -1607,11 +1607,11 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default AStream user agent',
   }),
 
-  BUILTIN_PROXY_AUTH: proxyAuth({
+  AIOSTREAMS_AUTH: proxyAuth({
     default: undefined,
-    desc: 'Builtin proxy auth',
+    desc: 'Authorisation credentials for this AIOStreams instance',
   }),
-  BUILTIN_PROXY_ADMINS: commaSeparated({
+  AIOSTREAMS_AUTH_ADMINS: commaSeparated({
     default: undefined,
     desc: 'Comma separated list of admin usernames. If not set, all users are admins.',
   }),

@@ -26,8 +26,8 @@ export class BuiltinProxy extends BaseProxy {
     }
 
     if (
-      Env.BUILTIN_PROXY_AUTH?.has(username) &&
-      Env.BUILTIN_PROXY_AUTH?.get(username) !== password
+      Env.AIOSTREAMS_AUTH?.has(username) &&
+      Env.AIOSTREAMS_AUTH?.get(username) !== password
     ) {
       throw new Error('Invalid credentials');
     }
@@ -36,8 +36,8 @@ export class BuiltinProxy extends BaseProxy {
       username,
       password,
       admin:
-        Env.BUILTIN_PROXY_ADMINS && Env.BUILTIN_PROXY_ADMINS.length > 0
-          ? Env.BUILTIN_PROXY_ADMINS.includes(username)
+        Env.AIOSTREAMS_AUTH_ADMINS && Env.AIOSTREAMS_AUTH_ADMINS.length > 0
+          ? Env.AIOSTREAMS_AUTH_ADMINS.includes(username)
           : true,
     };
   }
@@ -176,7 +176,7 @@ export class BuiltinProxyStats {
   }
 
   public async getAllUserStats(): Promise<Map<string, UserStats>> {
-    const users = Env.BUILTIN_PROXY_AUTH?.keys();
+    const users = Env.AIOSTREAMS_AUTH?.keys();
     const userStats = new Map<string, UserStats>();
 
     for (const user of users ?? []) {

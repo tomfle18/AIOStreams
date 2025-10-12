@@ -283,7 +283,7 @@ class TVDBApi {
         {
           schema: AuthTokenSchema,
           method: 'POST',
-          timeout: 2000,
+          timeout: 3000,
           body: {
             apikey: this.apiKey,
           },
@@ -315,7 +315,7 @@ class TVDBApi {
           `/search/remoteid/${remoteId}`,
           {
             schema: RemoteIdSearchResponseSchema,
-            timeout: 2000,
+            timeout: 5000,
           }
         );
       },
@@ -334,7 +334,7 @@ class TVDBApi {
           `/series/${id}`,
           {
             schema: SeriesResponseSchema,
-            timeout: 2000,
+            timeout: 5000,
           }
         );
       },
@@ -353,7 +353,7 @@ class TVDBApi {
           `/movies/${id}`,
           {
             schema: MovieResponseSchema,
-            timeout: 2000,
+            timeout: 5000,
           }
         );
       },

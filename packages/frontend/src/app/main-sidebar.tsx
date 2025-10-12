@@ -126,16 +126,12 @@ export function MainSidebar() {
       isCurrent: selectedMenu === 'formatter',
       id: 'formatter',
     },
-    ...(mode === 'pro'
-      ? [
-          {
-            name: 'Proxy',
-            iconType: BiServer,
-            isCurrent: selectedMenu === 'proxy',
-            id: 'proxy',
-          },
-        ]
-      : []),
+    {
+      name: 'Proxy',
+      iconType: BiServer,
+      isCurrent: selectedMenu === 'proxy',
+      id: 'proxy',
+    },
     {
       name: 'Miscellaneous',
       iconType: BiCog,

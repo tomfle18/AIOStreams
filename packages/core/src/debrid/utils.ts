@@ -17,6 +17,7 @@ import {
   TitleMetadata,
 } from './base.js';
 import { normaliseTitle, titleMatch } from '../parser/utils.js';
+import { partial_ratio } from 'fuzzball';
 
 const logger = createLogger('debrid');
 
@@ -129,7 +130,7 @@ export const isTitleWrong = (
     !titleMatch(
       normaliseTitle(parsed.title),
       metadata.titles.map(normaliseTitle),
-      { threshold: 0.8 }
+      { threshold: 0.8, scorer: partial_ratio }
     )
   ) {
     return true;

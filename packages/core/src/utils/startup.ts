@@ -529,15 +529,15 @@ const logStartupInfo = () => {
   });
 
   logSection('BUILT-IN PROXY', '🔧', () => {
-    if (Env.BUILTIN_PROXY_AUTH) {
+    if (Env.AIOSTREAMS_AUTH) {
       logKeyValue('Status:', '✅ Configured');
-      const users = Array.from(Env.BUILTIN_PROXY_AUTH.keys());
+      const users = Array.from(Env.AIOSTREAMS_AUTH.keys());
       if (users.length === 0) {
         logKeyValue('Users:', '❌ None');
       } else {
         logKeyValue('Users:', '');
         for (const user of users) {
-          const password = Env.BUILTIN_PROXY_AUTH.get(user);
+          const password = Env.AIOSTREAMS_AUTH.get(user);
           const masked =
             password && password.length > 0
               ? '*'.repeat(Math.max(4, Math.min(password.length, 12)))
@@ -547,8 +547,8 @@ const logStartupInfo = () => {
       }
       logKeyValue(
         'Admins:',
-        Env.BUILTIN_PROXY_ADMINS
-          ? `${Env.BUILTIN_PROXY_ADMINS.join(', ')}`
+        Env.AIOSTREAMS_AUTH_ADMINS
+          ? `${Env.AIOSTREAMS_AUTH_ADMINS.join(', ')}`
           : '⚠️  All users'
       );
     } else {

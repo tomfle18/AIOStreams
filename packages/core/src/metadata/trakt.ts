@@ -46,10 +46,10 @@ export async function getTraktAliases(
   }
 
   try {
-    const data = await makeRequest(
+    const response = await makeRequest(
       `${TRAKT_API_BASE_URL}/${parsedId.mediaType === 'movie' ? 'movies' : 'shows'}/${imdbId}/aliases`,
       {
-        timeout: 2000,
+        timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
           'trakt-api-version': '1',
@@ -57,8 +57,12 @@ export async function getTraktAliases(
         },
       }
     );
-
-    const parsedData = TraktAliasSchema.safeParse(await data.json());
+    if (!response.ok) {
+      throw new Error(
+        `Failed to retrieve Trakt aliases: ${response.status} - ${response.statusText}`
+      );
+    }
+    const parsedData = TraktAliasSchema.safeParse(await response.json());
 
     if (!parsedData.success) {
       logger.error(
